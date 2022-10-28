@@ -13,12 +13,23 @@ import random
 touch = TouchIn(D1)
 
 # NeoPixel strip (of 16 LEDs) connected on D3
-NUMPIXELS = 27
-neopixels = neopixel.NeoPixel(D3, NUMPIXELS, brightness=1, auto_write=True)
+NUMPIXELS = 22
+neopixels = neopixel.NeoPixel(D3, NUMPIXELS, brightness=.125, auto_write=True)
 DIRECTION = 1 # 1 == "up"
 COLOR = 1 # 1 == "red"
-CHASECOLOR = 0
+MAXLITPIXELS = 5
+CURLITPIXELS = 0
 
+# COLORS
+RED = (255, 0, 0)
+DARKRED = (127,0,0)
+ORANGE = (255,165,0)
+DARKORANGE = (127, 83, 0)
+WHITE = (125, 125, 125)
+BLUE = (0,0,255)
+PURPLE = (180, 0, 255)
+
+COLORPALLET = [RED, DARKRED, RED, DARKRED, RED, DARKRED, ORANGE, DARKORANGE, ORANGE, DARKORANGE, WHITE, BLUE, PURPLE]
 ######################### HELPERS ##############################
 
 # Helper to convert analog input to voltage
@@ -100,67 +111,53 @@ def kittPulse():
             neopixels[p-3] = (255,0,0)
         if p > 7:
             neopixels[p-6] = (0, 0, 0)
-        # time.sleep(.015)
+        time.sleep(.015)
+
+def dimmer():
+    for p in range(NUMPIXELS):
+        aPixel = neopixels[p]
+        rCur = aPixel[0]
+        gCur = aPixel[1]
+        bCur = aPixel[2]
+        rNew = 0
+        gNew = 0
+        bNew = 0
+        if rCur > 25 or gCur >25 or bCur > 25:
+            rNew = rCur - 20
+            gNew = gCur - 20
+            bNew = bCur - 20
+            if (rNew < 0):
+                rNew = 0
+            if (gNew < 0):
+                gNew = 0
+            if (bNew < 0):
+                bNew = 0
+
+            # print(rNew)
+            neopixels[p] = (rNew, gNew, bNew)
+        else:
+            neopixels[p] = (0,0,0)
+    time.sleep(.0125) # make bigger to slow down
 
 ######################### MAIN LOOP ##############################
 
 i = 0;
-colorChange = 0;
-chaseColor = 0;
-
+curLitPixels = 0
 while True:
+    ## How many pixels are currently lit?
+    curLitPixels = 0
+    for x in range (NUMPIXELS):
+        aPixel = neopixels[x]
+        if aPixel[0] > 0 or aPixel[1] > 0 or aPixel[2] > 0:
+            curLitPixels += 1
+    CURLITPIXELS = curLitPixels
 
-    if touch.value:
-        neopixels.brightness = 1
-        neopixels.fill((0, 0, 0))
-        flicker(random.randint(0, (NUMPIXELS-1)),(255, 255, 255))
-        colorChange = 1;
-        print("D1 touched!")
-    else:
-        if colorChange:
-            colorChange = 0
-            # print("Changing color!")
-            if COLOR == 1:
-                COLOR = 2
-            elif COLOR == 2:
-                COLOR = 3
-            elif COLOR == 3:
-                COLOR = 1
-            elif COLOR == 4:
-                COLOR = 1
+    ## Select a random pixel and fill it with a color
+    if (CURLITPIXELS < MAXLITPIXELS) and (random.randint(0, 10) > 3):
+        neopixels[random.randint(0, (NUMPIXELS-1))] = COLORPALLET[random.randint(0,12)]
 
-            if random.randint(0, 10) == 5:
-                COLOR = 4
+    ## for each pixel, step it down
+    dimmer()
 
-        aPixel = neopixels[0]
-        rCur = aPixel[0]
-        # print(rCur)
-        if rCur >= 244:
-            DIRECTION = 2
 
-        elif rCur <= 50:
-            DIRECTION = 1
 
-        if COLOR == 1:
-            whitePulse()
-            neopixels.brightness = .125
-        elif COLOR == 2:
-            redPulse()
-            neopixels.brightness = .125
-        elif COLOR == 3:
-            chase(chaseColor)
-            if chaseColor == 0:
-                chaseColor = 1
-            else:
-                chaseColor = 0
-            neopixels.brightness = .125
-        elif COLOR == 4:
-            rainbowPulse(i)
-            neopixels.brightness = 1
-
-    i = (i+10) % 256  # run from 0 to 255
-    time.sleep(.00625) # make bigger to slow down
-
-    # neopixels[0] = (255,255, 255)
-    # neopixels[0] = (0, 0, 0)
-    # time.sleep(0.1)
